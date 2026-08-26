@@ -1,0 +1,9 @@
+INPUT_EMAIL = 'input28'
+INPUT_PASS = 'input36'
+LOGON = 'button'
+LOGON_BUTTON = "Fazer Login"
+LOGON_TITLE_PAGE = 'Plan International - Login'
+PLAN_APPS_TITLE_PAGE = 'Meu Painel de Apps | Plan International'
+SAP_TITLE_PAGE = 'SAP Easy Access - User Menu for'
+CHECKBOX_REMEMBERME = 'input111'
+AUTH_JSON_PATH = './src/automacao/f_okta_login/state_context/auth.json'

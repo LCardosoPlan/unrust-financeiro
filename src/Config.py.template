@@ -1,0 +1,23 @@
+import os
+
+PLAN_EMAIL = "plan.email@plan-international.org"
+PLAN_SENHA = "plan email senha"
+OKTA_URL = "https://plan-international.okta-emea.com/"
+SAP_URL = "https://saperpprod.planapps.org/mywebgui#"
+BROWSER_MODE = False
+TEST_MODE = False
+TRANSACAO_SAP = "FAGLB03"
+
+# --- Faixas de data (usadas por DateTimeUtils) ---
+MONTH_RANGE_past = 3
+MONTH_RANGE_future = 3
+DAY_RANGE_past = 2
+DAY_RANGE_FUTURE = 27
+DATE_MODE = "day"  # "day" ou "month"
+
+# --- Parametros da transacao FAGLB03 (G/L Account Balance Display) ---
+ACCOUNT_NUMBER_START = "100000"
+ACCOUNT_NUMBER_END = "999999"
+COMPANY_CODE = "BRA1"
+FISCAL_YEAR = "" # vazio = ano corrente
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))

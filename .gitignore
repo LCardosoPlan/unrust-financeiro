@@ -1,0 +1,17 @@
+# Configurações e credenciais sensíveis
+[Cc]onfig.py
+auth.json
+**/state_context/*.json
+
+# Cache Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Logs
+logs/
+*.log
+
+# Pastas de arquivos removidos / backup
+_removido/
+removido/
