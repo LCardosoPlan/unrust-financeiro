@@ -1,2 +1,4 @@
 playwright
 python-dateutil
+pandas
+openpyxl
