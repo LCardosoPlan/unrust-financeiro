@@ -1,11 +1,23 @@
+import asyncio
 import io
 import os
-from playwright.async_api import Page
-from src.Config import SAP_URL, TEST_MODE
+import re
+from playwright.async_api import Page, TimeoutError as PlaywrightTimeout
+from src.Config import SAP_URL, TEST_MODE, TIMEOUT_DOWNLOAD_MS, TIMEOUT_CONFIRMACAO_MS
 from src.datetime_utils.datetime_utils import DateTimeUtils
 from src.infra.logger import setup_logger
 
 logger = setup_logger(__name__)
+
+# O dialogo "Enter file name to save" que o SAP abre depois de confirmar a
+# exportacao tem o nome do arquivo ja proposto (EXPORT_<data>_<hora>.xlsx) e e
+# aceito como esta: o carimbo de data/hora proprio e aplicado ao gravar em disco.
+#
+# Os popups do WebGUI sao 'webguiPopupWindow<n>' (o numero varia) e os botoes
+# nao sao <button>: sao divs com a classe 'lsButton'. Por isso o OK e localizado
+# por esse par, e nao por role/nome acessivel.
+POPUP_WEBGUI = '[id^="webguiPopupWindow"]'
+BOTAO_WEBGUI = "div.lsButton"
 
 
 class SapAutomation:
@@ -68,29 +80,43 @@ class SapAutomation:
         page: Page,
         nome_logico: str,
         nome_arquivo: str = None,
+        botao_confirmar=None,
     ) -> io.BytesIO:
         """
         Trata o dialogo de exportacao ja aberto: opcionalmente preenche o nome
-        do arquivo, confirma com OK e devolve o .xlsx em memoria (BytesIO).
+        do arquivo, confirma o dialogo e devolve o .xlsx em memoria (BytesIO).
 
-        O dialogo do SAP abre o download numa popup; ela e fechada no fim.
+        'botao_confirmar' e o locator que confirma o dialogo. O nome do botao
+        varia com o dialogo: o classico usa "OK" (valor por omissao), enquanto
+        o "Export as" da grid de partidas confirma pelo proprio "Export to...".
+
+        O SAP pode ou nao abrir o download numa popup; qualquer aba extra
+        aberta pelo download e fechada no fim.
         """
         if nome_arquivo:
             campo_nome = page.get_by_role("textbox", name="File Name", exact=True)
             await campo_nome.click()
             await campo_nome.fill(nome_arquivo)
 
-        logger.info(f"Manipulando download de '{nome_logico}'")
-        async with page.expect_download() as download_info:
-            async with page.expect_popup() as popup_info:
-                await page.get_by_role("button", name="OK").click()
-            popup = await popup_info.value
+        if botao_confirmar is None:
+            botao_confirmar = page.get_by_role("button", name="OK")
+
+        logger.info(
+            f"Manipulando download de '{nome_logico}' "
+            f"(ate {TIMEOUT_DOWNLOAD_MS // 1000}s)"
+        )
+        async with page.expect_download(timeout=TIMEOUT_DOWNLOAD_MS) as download_info:
+            await botao_confirmar.click()
+            await self._clicar_ok(page)
         download = await download_info.value
 
         with open(await download.path(), "rb") as f:
             conteudo = f.read()
 
-        await popup.close()
+        # O download pode ter sido servido por uma popup; fecha o que sobrou.
+        for aba in list(page.context.pages):
+            if aba is not page:
+                await aba.close()
 
         em_memoria = io.BytesIO(conteudo)
         em_memoria.name = f"{nome_logico}.xlsx"
@@ -107,6 +133,62 @@ class SapAutomation:
             logger.info(f">>> [MODO TESTE] Excel gravado em '{caminho}' <<<")
 
         return em_memoria
+
+    @staticmethod
+    async def _clicar_ok(page: Page) -> bool:
+        """
+        Clica o "OK" do dialogo "Enter file name to save".
+
+        No WebGUI esse OK e uma div.lsButton dentro de 'webguiPopupWindow<n>',
+        e nao um <button> - nem tem nome acessivel. A estrategia principal usa
+        esse par; as restantes ficam como rede de seguranca caso o dialogo mude.
+        Devolve True se clicou. Se nada casar, os textos dos elementos
+        clicaveis visiveis vao para o log, para corrigir o seletor sem adivinhar.
+        """
+        candidatos = (
+            (
+                f"{BOTAO_WEBGUI} 'OK' no popup",
+                page.locator(f"{POPUP_WEBGUI} {BOTAO_WEBGUI}").filter(
+                    has_text=re.compile(r"^\s*OK\s*$")
+                ),
+            ),
+            (
+                f"{BOTAO_WEBGUI} 'OK' na pagina",
+                page.locator(BOTAO_WEBGUI).filter(
+                    has_text=re.compile(r"^\s*OK\s*$")
+                ),
+            ),
+            ("button 'OK'", page.get_by_role("button", name="OK", exact=True)),
+            ("texto 'OK'", page.get_by_text("OK", exact=True)),
+        )
+
+        prazo = TIMEOUT_CONFIRMACAO_MS / 1000
+        limite = asyncio.get_running_loop().time() + prazo
+        while asyncio.get_running_loop().time() < limite:
+            for descricao, locator in candidatos:
+                try:
+                    alvo = locator.first
+                    if await alvo.is_visible():
+                        logger.info(f"Confirmando a exportacao via {descricao}")
+                        await alvo.click()
+                        return True
+                except Exception:
+                    continue
+            await asyncio.sleep(0.5)
+
+        try:
+            visiveis = await page.locator(
+                f"{BOTAO_WEBGUI}:visible, button:visible, a:visible, "
+                "[role='button']:visible"
+            ).all_inner_texts()
+            rotulos = sorted({t.strip() for t in visiveis if t.strip()})
+            logger.error(
+                f"Nenhum 'OK' encontrado em {prazo:.0f}s. "
+                f"Elementos clicaveis visiveis: {rotulos}"
+            )
+        except Exception as e:
+            logger.error(f"Nenhum 'OK' encontrado e falhou o diagnostico: {e}")
+        return False
 
     async def exportar_excel(self, page: Page, nome_logico: str) -> io.BytesIO:
         """

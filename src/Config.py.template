@@ -29,12 +29,42 @@ ACCOUNT_NUMBER_END = "999999"
 COMPANY_CODE_START = ""
 COMPANY_CODE_END = "BRA1"
 
-# Vazio = calcula o ano fiscal corrente via DateTimeUtils.get_fiscal_year().
+# Vazio = usa o ano fiscal do periodo reportado (mes anterior), calculado
+# por DateTimeUtils.get_previous_fiscal_period(). Em julho isso aponta para o
+# ano fiscal anterior, pois o periodo reportado e o 12 (junho).
 FISCAL_YEAR = ""
 
-# Linha da grid de saldos cujo valor sera aberto (drill-down) e a linha da
-# grid de partidas individuais usada para disparar a exportacao.
-FAGLB03_LINHA_SALDO = 2
-FAGLB03_LINHA_PARTIDAS = 0
+# A linha da grid de saldos e escolhida pelo periodo contabil a reportar
+# (sempre o mes anterior - ver DateTimeUtils.get_previous_fiscal_period).
+# Deslocamento entre o periodo (1..12) e o indice da linha na grid. Na
+# numeracao "-mrss-cont-none-Row-N" a linha 0 e o saldo transportado
+# ("Bal.Carryforward") e a linha N corresponde ao periodo N, logo o offset e 0.
+# (Nao confundir com os ids "grid#C117#R,C" do inspetor, onde R = periodo + 1.)
+FAGLB03_OFFSET_LINHA_PERIODO = 0
+
+# Preencha para forcar um periodo especifico (1..12); vazio = mes anterior.
+FAGLB03_PERIODO = ""
+
+# Coluna usada para localizar a linha de cabecalho no .xlsx exportado. O export
+# comeca com um bloco de titulo, por isso o cabecalho nao esta na primeira linha.
+FAGLB03_COLUNA_ANCORA = "Document Number"
+
+# Layout a aplicar na grid de partidas individuais via Ctrl+F9. Vazio = mantem
+# o layout padrao da transacao.
+FAGLB03_LAYOUT = "ME1SAP"
+
+# Tempo maximo de espera pela grid de partidas individuais. O relatorio
+# 'G/L Account Line Item Display' pode levar minutos quando a faixa de contas
+# e ampla (100000..999999).
+FAGLB03_TIMEOUT_PARTIDAS_MS = 180000
+
+# Tempo maximo de espera pelo download do .xlsx depois de confirmar o dialogo
+# de exportacao ("Transferring package 1 of 1 ..." na barra de status).
+TIMEOUT_DOWNLOAD_MS = 180000
+
+# Tempo de espera pelo popup "Enter file name to save" que o SAP abre depois de
+# confirmar a exportacao. Se nao aparecer nesse prazo, segue em frente.
+# Observado ~15s para o popup surgir, por isso a margem folgada.
+TIMEOUT_CONFIRMACAO_MS = 120000
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
