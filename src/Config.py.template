@@ -15,9 +15,26 @@ DAY_RANGE_past = 2
 DAY_RANGE_FUTURE = 27
 DATE_MODE = "day"  # "day" ou "month"
 
+# --- Ano fiscal ---
+# Mes civil em que o exercicio comeca (julho = 7, logo julho e o periodo 1).
+FISCAL_YEAR_START_MONTH = 7
+
 # --- Parametros da transacao FAGLB03 (G/L Account Balance Display) ---
 ACCOUNT_NUMBER_START = "100000"
 ACCOUNT_NUMBER_END = "999999"
-COMPANY_CODE = "BRA1"
-FISCAL_YEAR = "" # vazio = ano corrente
+
+# Intervalo de empresa. A gravacao do codegen preencheu apenas o campo "to",
+# deixando o inicio vazio. Para filtrar uma unica empresa, use
+# COMPANY_CODE_START = COMPANY_CODE_END = "BRA1".
+COMPANY_CODE_START = ""
+COMPANY_CODE_END = "BRA1"
+
+# Vazio = calcula o ano fiscal corrente via DateTimeUtils.get_fiscal_year().
+FISCAL_YEAR = ""
+
+# Linha da grid de saldos cujo valor sera aberto (drill-down) e a linha da
+# grid de partidas individuais usada para disparar a exportacao.
+FAGLB03_LINHA_SALDO = 2
+FAGLB03_LINHA_PARTIDAS = 0
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

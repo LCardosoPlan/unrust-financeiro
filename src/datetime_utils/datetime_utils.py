@@ -1,6 +1,12 @@
 from datetime import datetime, date, timedelta
 from dateutil.relativedelta import relativedelta
-from src.Config import (MONTH_RANGE_past, MONTH_RANGE_future, DAY_RANGE_past, DAY_RANGE_future)
+from src.Config import (
+    MONTH_RANGE_past,
+    MONTH_RANGE_future,
+    DAY_RANGE_past,
+    DAY_RANGE_FUTURE,
+    FISCAL_YEAR_START_MONTH,
+)
 
 class DateTimeUtils:
     """
@@ -28,7 +34,7 @@ class DateTimeUtils:
     def get_day_range():
         today = date.today()
         days_ago = today - relativedelta(days=DAY_RANGE_past)
-        days_ahead = today + relativedelta(days=DAY_RANGE_future)
+        days_ahead = today + relativedelta(days=DAY_RANGE_FUTURE)
         
         formatted_past_date = DateTimeUtils.format_date_sap(days_ago)
         formatted_future_date = DateTimeUtils.format_date_sap(days_ahead)
@@ -56,3 +62,25 @@ class DateTimeUtils:
         formatted_future_date = DateTimeUtils.format_date_sap(months_ahead)
         
         return (formatted_past_date, formatted_future_date)
+
+    @staticmethod
+    def get_fiscal_year(reference_date: date = None) -> str:
+        """
+        Devolve o ano fiscal da Plan para a data de referencia.
+
+        O exercicio comeca em FISCAL_YEAR_START_MONTH (julho = mes 1), portanto
+        de julho a dezembro o ano fiscal ja e o ano civil seguinte.
+        Ex.: 28.08.2026 -> "2027"; 20.03.2026 -> "2026".
+        """
+        ref = reference_date or date.today()
+        ano = ref.year + 1 if ref.month >= FISCAL_YEAR_START_MONTH else ref.year
+        return str(ano)
+
+    @staticmethod
+    def get_fiscal_period(reference_date: date = None) -> int:
+        """
+        Devolve o periodo contabil (1..12) dentro do ano fiscal.
+        Julho = 1, agosto = 2, ..., junho = 12.
+        """
+        ref = reference_date or date.today()
+        return (ref.month - FISCAL_YEAR_START_MONTH) % 12 + 1

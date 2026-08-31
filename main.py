@@ -2,7 +2,7 @@ import os
 import asyncio
 from playwright.async_api import async_playwright, expect
 from src.automacao.f_okta_login.okta_login import OktaAuthenticator
-from src.automacao.f_sap_automacao.sap_automacao import SapAutomation
+from src.automacao.f_sap_automacao.faglb03 import Faglb03Automation
 from src.automacao.f_constantes.CONST import (
     AUTH_JSON_PATH,
     PLAN_APPS_TITLE_PAGE,
@@ -14,6 +14,11 @@ from src.datetime_utils.datetime_utils import DateTimeUtils
 from src.infra.logger import setup_logger
 
 logger = setup_logger(__name__)
+
+# Transacoes ja implementadas. Novas transacoes entram aqui.
+AUTOMACOES = {
+    "FAGLB03": Faglb03Automation,
+}
 
 
 async def main():
@@ -52,16 +57,29 @@ async def main():
             else:
                 raise Exception(f"Pagina inesperada: {page_title}")
 
+            automacao = AUTOMACOES.get(TRANSACAO_SAP.upper())
+            if automacao is None:
+                raise Exception(
+                    f"Transacao '{TRANSACAO_SAP}' nao implementada. "
+                    f"Disponiveis: {', '.join(AUTOMACOES)}"
+                )
+
             logger.info("Iniciando automacao SAP...")
-            resultado = await SapAutomation(TRANSACAO_SAP).run(page)
+            resultado = await automacao().run(page)
             logger.info("Automacao SAP concluida.")
 
         except Exception as e:
             logger.error(f"Ocorreu um erro fatal durante a automacao: {e}")
-            error_screenshot = f"error_screenshot - {DateTimeUtils.get_current_datetime()}.png"
-            os.makedirs("logs/screenshots", exist_ok=True)
-            await page.screenshot(path=f"logs/screenshots/{error_screenshot}")
-            logger.info(f"Screenshot de erro salvo em {error_screenshot}")
+            try:
+                error_screenshot = (
+                    f"error_screenshot - {DateTimeUtils.get_current_datetime()}.png"
+                )
+                os.makedirs("logs/screenshots", exist_ok=True)
+                await page.screenshot(path=f"logs/screenshots/{error_screenshot}")
+                logger.info(f"Screenshot de erro salvo em {error_screenshot}")
+            except Exception as erro_screenshot:
+                # Nao deixar a falha ao capturar o ecra mascarar o erro original.
+                logger.warning(f"Nao foi possivel salvar o screenshot: {erro_screenshot}")
 
         finally:
             logger.info("Fechando navegador.")
