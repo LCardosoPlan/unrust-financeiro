@@ -10,6 +10,8 @@ from src.automacao.f_constantes.CONST import (
     SAP_TITLE_PAGE,
 )
 from src.Config import PLAN_EMAIL, PLAN_SENHA, SAP_URL, BROWSER_MODE, TRANSACAO_SAP
+from src.processamento_de_dados.planilha_sap import PlanilhaSap
+from src.processamento_de_dados.planilha_faglb03 import PlanilhaFaglb03
 from src.datetime_utils.datetime_utils import DateTimeUtils
 from src.infra.logger import setup_logger
 
@@ -18,6 +20,11 @@ logger = setup_logger(__name__)
 # Transacoes ja implementadas. Novas transacoes entram aqui.
 AUTOMACOES = {
     "FAGLB03": Faglb03Automation,
+}
+
+# Leitor da planilha de cada transacao (cabecalho, colunas, regras de negocio).
+PLANILHAS = {
+    "FAGLB03": PlanilhaFaglb03,
 }
 
 
@@ -85,8 +92,16 @@ async def main():
             logger.info("Fechando navegador.")
             await browser.close()
 
-    # TODO: tratar 'resultado' (processamento / envio) quando a nova transacao estiver definida.
-    return resultado
+    if resultado is None:
+        logger.warning("Nenhuma planilha foi extraida; nada a processar.")
+        return None
+
+    # A planilha fica em memoria como DataFrame. As regras de negocio entram
+    # aqui, sobre 'planilha.df', quando estiverem definidas.
+    leitor = PLANILHAS.get(TRANSACAO_SAP.upper(), PlanilhaSap)
+    planilha = leitor(resultado, nome_logico=TRANSACAO_SAP.lower())
+    planilha.registrar_estrutura()
+    return planilha
 
 
 if __name__ == "__main__":

@@ -12,6 +12,9 @@ __pycache__/
 logs/
 *.log
 
+# Planilhas exportadas do SAP (dados financeiros - Confidencial Interno)
+arquivos_extraidos/
+
 # Pastas de arquivos removidos / backup
 _removido/
 removido/

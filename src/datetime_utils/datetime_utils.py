@@ -84,3 +84,25 @@ class DateTimeUtils:
         """
         ref = reference_date or date.today()
         return (ref.month - FISCAL_YEAR_START_MONTH) % 12 + 1
+
+    @staticmethod
+    def get_previous_fiscal_period(reference_date: date = None) -> tuple:
+        """
+        Devolve o periodo contabil a ser reportado: sempre o mes anterior.
+
+        Regra:
+          - estamos no periodo N (N > 1) -> reporta o periodo N-1 do mesmo
+            ano fiscal. Ex.: agosto (periodo 2) -> periodo 1 (julho).
+          - estamos no periodo 1 (julho)  -> reporta o periodo 12 (junho) do
+            ano fiscal anterior.
+
+        Retorna:
+            tuple: (ano_fiscal: str, periodo: int)
+        """
+        ref = reference_date or date.today()
+        periodo_atual = DateTimeUtils.get_fiscal_period(ref)
+        ano_fiscal = int(DateTimeUtils.get_fiscal_year(ref))
+
+        if periodo_atual == 1:
+            return (str(ano_fiscal - 1), 12)
+        return (str(ano_fiscal), periodo_atual - 1)
