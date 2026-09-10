@@ -12,6 +12,12 @@ from src.automacao.f_constantes.CONST import (
 from src.Config import PLAN_EMAIL, PLAN_SENHA, SAP_URL, BROWSER_MODE, TRANSACAO_SAP
 from src.processamento_de_dados.planilha_sap import PlanilhaSap
 from src.processamento_de_dados.planilha_faglb03 import PlanilhaFaglb03
+from src.correlacao import pipeline, tabelas_mestras
+from executar_correlacao import (
+    DIRETORIO_SAIDA,
+    XLSB_PADRAO as XLSB_CORRELACAO,
+    gravar as gravar_correlacao,
+)
 from src.datetime_utils.datetime_utils import DateTimeUtils
 from src.infra.logger import setup_logger
 
@@ -96,12 +102,19 @@ async def main():
         logger.warning("Nenhuma planilha foi extraida; nada a processar.")
         return None
 
-    # A planilha fica em memoria como DataFrame. As regras de negocio entram
-    # aqui, sobre 'planilha.df', quando estiverem definidas.
+    # A planilha fica em memoria como DataFrame.
     leitor = PLANILHAS.get(TRANSACAO_SAP.upper(), PlanilhaSap)
     planilha = leitor(resultado, nome_logico=TRANSACAO_SAP.lower())
     planilha.registrar_estrutura()
-    return planilha
+
+    # Etapa de correlacao SAP <-> NG: colunas I a N e as duas planilhas de
+    # saida. O mesmo codigo corre offline via 'executar_correlacao.py'.
+    mestras = tabelas_mestras.carregar(XLSB_CORRELACAO)
+    correlacao = pipeline.executar(planilha.df, mestras)
+    gravar_correlacao(
+        correlacao, DIRETORIO_SAIDA, DateTimeUtils.get_current_datetime()
+    )
+    return correlacao
 
 
 if __name__ == "__main__":

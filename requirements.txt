@@ -2,3 +2,6 @@ playwright
 python-dateutil
 pandas
 openpyxl
+pyxlsb
+pyarrow
+pytest

@@ -21,3 +21,12 @@ removido/
 
 # Virtual Environments
 venv/
+
+# Pasta de correlacao SAP-NG (dados financeiros - Confidencial Interno)
+*.xlsb
+
+# Cache das tabelas mestras e planilhas de saida (derivados dos dados acima).
+# O manifesto fica versionado: da rastreabilidade sem expor os dados.
+dados_mestres/*
+!dados_mestres/manifesto.json
+saidas/
